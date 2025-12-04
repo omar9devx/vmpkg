@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-readonly VMPKG_VERSION="1.1.2"
+VMPKG_VERSION="1.2.0"
 
 ###############################################################################
 # ENV / FLAGS
@@ -34,7 +34,7 @@ CYAN='\033[0;36m'
 RESET='\033[0m'
 
 apply_color_mode() {
-  if [[ "${VMPKG_NO_COLOR}" -eq 1 || -n "${NO_COLOR-}" ]]; then
+  if [[ "$VMPKG_NO_COLOR" -eq 1 || -n "${NO_COLOR-}" ]]; then
     BOLD=''; DIM=''; GREEN=''; YELLOW=''; RED=''; BLUE=''; MAGENTA=''; CYAN=''; RESET=''
   fi
 }
@@ -44,64 +44,64 @@ timestamp() {
 }
 
 log() {
-  if [[ "${VMPKG_QUIET}" -eq 1 ]]; then return; fi
-  printf "%b[%s]%b %bVMPKG%b %b✓%b %s\n" \
-    "${DIM}" "$(timestamp)" "${RESET}" \
-    "${BOLD}${CYAN}" "${RESET}" \
-    "${GREEN}" "${RESET}" \
+  if [[ "$VMPKG_QUIET" -eq 1 ]]; then return; fi
+  printf "%s[%s]%s %sVMPKG%s %s✓%s %s\n" \
+    "$DIM" "$(timestamp)" "$RESET" \
+    "$BOLD$CYAN" "$RESET" \
+    "$GREEN" "$RESET" \
     "$*" >&2
 }
 
 log_success() {
-  if [[ "${VMPKG_QUIET}" -eq 1 ]]; then return; fi
-  printf "%b[%s]%b %bVMPKG%b %b✔ SUCCESS%b %s\n" \
-    "${DIM}" "$(timestamp)" "${RESET}" \
-    "${BOLD}${CYAN}" "${RESET}" \
-    "${GREEN}" "${RESET}" \
+  if [[ "$VMPKG_QUIET" -eq 1 ]]; then return; fi
+  printf "%s[%s]%s %sVMPKG%s %s✔ SUCCESS%s %s\n" \
+    "$DIM" "$(timestamp)" "$RESET" \
+    "$BOLD$CYAN" "$RESET" \
+    "$GREEN" "$RESET" \
     "$*" >&2
 }
 
 warn() {
-  printf "%b[%s]%b %bVMPKG%b %b⚠ WARN%b %s\n" \
-    "${DIM}" "$(timestamp)" "${RESET}" \
-    "${BOLD}${CYAN}" "${RESET}" \
-    "${YELLOW}" "${RESET}" \
+  printf "%s[%s]%s %sVMPKG%s %s⚠ WARN%s %s\n" \
+    "$DIM" "$(timestamp)" "$RESET" \
+    "$BOLD$CYAN" "$RESET" \
+    "$YELLOW" "$RESET" \
     "$*" >&2
 }
 
 die() {
-  printf "%b[%s]%b %bVMPKG%b %b✗ ERROR%b %s\n" \
-    "${DIM}" "$(timestamp)" "${RESET}" \
-    "${BOLD}${CYAN}" "${RESET}" \
-    "${RED}" "${RESET}" \
+  printf "%s[%s]%s %sVMPKG%s %s✗ ERROR%s %s\n" \
+    "$DIM" "$(timestamp)" "$RESET" \
+    "$BOLD$CYAN" "$RESET" \
+    "$RED" "$RESET" \
     "$*" >&2
   exit 1
 }
 
 debug() {
-  if [[ "${VMPKG_DEBUG}" -eq 1 ]]; then
-    printf "%b[%s]%b %bVMPKG%b %bDBG%b %s\n" \
-      "${DIM}" "$(timestamp)" "${RESET}" \
-      "${BOLD}${CYAN}" "${RESET}" \
-      "${MAGENTA}" "${RESET}" \
+  if [[ "$VMPKG_DEBUG" -eq 1 ]]; then
+    printf "%s[%s]%s %sVMPKG%s %sDBG%s %s\n" \
+      "$DIM" "$(timestamp)" "$RESET" \
+      "$BOLD$CYAN" "$RESET" \
+      "$MAGENTA" "$RESET" \
       "$*" >&2
   fi
 }
 
 ui_hr() {
-  printf "%b%s%b\n" "${DIM}" "────────────────────────────────────────────────────────────" "${RESET}"
+  printf "%s%s%s\n" "$DIM" "────────────────────────────────────────────────────────────" "$RESET"
 }
 
 ui_title() {
   local msg="$1"
   ui_hr
-  printf "%b▶ %s%b\n" "${BOLD}${BLUE}" "$msg" "${RESET}"
+  printf "%s▶ %s%s\n" "$BOLD$BLUE" "$msg" "$RESET"
   ui_hr
 }
 
 ui_banner() {
   apply_color_mode
-  printf "%b" "${BOLD}${MAGENTA}"
+  printf "%s" "$BOLD$MAGENTA"
   cat <<'EOF'
  __     __  __  __  ____  _  __
  \ \   / / |  \/  ||  _ \| |/ /
@@ -109,8 +109,8 @@ ui_banner() {
    \ V /   | |  | ||  __/| . \ 
     \_/    |_|  |_||_|   |_|\_\  Package Manager
 EOF
-  printf "%b\n" "${RESET}"
-  printf "%bVersion %s%b\n" "${DIM}" "$VMPKG_VERSION" "${RESET}"
+  printf "%s\n" "$RESET"
+  printf "%sVersion %s%s\n" "$DIM" "$VMPKG_VERSION" "$RESET"
   ui_hr
 }
 
@@ -124,7 +124,7 @@ require_linux() {
   local uname_s
   uname_s="$(uname -s || echo "Unknown")"
   if [[ "$uname_s" != "Linux" ]]; then
-    die "vmpkg supports Linux only. Detected: ${uname_s}"
+    die "vmpkg supports Linux only. Detected: $uname_s"
   fi
 }
 
@@ -149,7 +149,7 @@ parse_global_flags() {
 
 vmpkg_confirm() {
   local msg="$1"
-  if [[ "${VMPKG_ASSUME_YES}" -eq 1 ]]; then
+  if [[ "$VMPKG_ASSUME_YES" -eq 1 ]]; then
     printf "vmpkg: %s [y/N]: y (auto)\n" "$msg"
     return 0
   fi
@@ -213,10 +213,10 @@ download_file() {
   local dl
   dl="$(choose_downloader)"
 
-  log "Downloading: ${url}"
-  debug "Target file: ${out}"
+  log "Downloading: $url"
+  debug "Target file: $out"
 
-  if [[ "${VMPKG_DRY_RUN}" -eq 1 ]]; then
+  if [[ "$VMPKG_DRY_RUN" -eq 1 ]]; then
     log "[DRY-RUN] Skipping actual download."
     return 0
   fi
@@ -249,8 +249,8 @@ extract_archive() {
 
   [[ -d "$dest" ]] || mkdir -p "$dest"
 
-  log "Extracting archive to: ${dest}"
-  debug "Archive type detected: ${type}"
+  log "Extracting archive to: $dest"
+  debug "Archive type detected: $type"
 
   case "$type" in
     tar.gz)
@@ -266,7 +266,7 @@ extract_archive() {
       unzip -q "$archive" -d "$dest"
       ;;
     *)
-      die "Unknown archive type for ${archive} (expected .tar.gz / .tar / .zip)."
+      die "Unknown archive type for $archive (expected .tar.gz / .tar / .zip)."
       ;;
   esac
 }
@@ -302,7 +302,7 @@ registry_register() {
   printf '%s|%s|%s|%s\n' "$name" "$version" "$url" "$desc" >>"$tmp"
   mv "$tmp" "$VMPKG_REGISTRY"
 
-  log "Registered package '${name}' version '${version}'."
+  log "Registered package '$name' version '$version'."
 }
 
 ###############################################################################
@@ -346,55 +346,46 @@ usage() {
   apply_color_mode
   ui_banner
 
-  printf "%bUsage:%b %bvmpkg [options] <command> [args]%b\n\n" \
-    "${BOLD}" "${RESET}" "${GREEN}" "${RESET}"
+  printf "%sUsage:%s %svmpkg [options] <command> [args]%s\n\n" \
+    "$BOLD" "$RESET" "$GREEN" "$RESET"
 
-  printf "%bGlobal options:%b\n" "${BOLD}" "${RESET}"
-  printf "  %b-y, --yes, --assume-yes%b    Assume yes for all prompts\n" "${YELLOW}" "${RESET}"
-  printf "  %b-n, --dry-run%b             Preview only, no changes\n" "${YELLOW}" "${RESET}"
-  printf "  %b--no-color%b                Disable colored output\n" "${YELLOW}" "${RESET}"
-  printf "  %b--debug%b                   Verbose debug logging\n" "${YELLOW}" "${RESET}"
-  printf "  %b-q, --quiet%b               Hide info logs\n\n" "${YELLOW}" "${RESET}"
+  printf "%sGlobal options:%s\n" "$BOLD" "$RESET"
+  printf "  %s-y, --yes, --assume-yes%s    Assume yes for all prompts\n" "$YELLOW" "$RESET"
+  printf "  %s-n, --dry-run%s             Preview only, no changes\n" "$YELLOW" "$RESET"
+  printf "  %s--no-color%s                Disable colored output\n" "$YELLOW" "$RESET"
+  printf "  %s--debug%s                   Verbose debug logging\n" "$YELLOW" "$RESET"
+  printf "  %s-q, --quiet%s               Hide info logs\n\n" "$YELLOW" "$RESET"
 
-  printf "%bCore commands:%b\n" "${BOLD}" "${RESET}"
-  printf "  %binit%b                       Initialize vmpkg directories\n" "${GREEN}" "${RESET}"
-  printf "  %bregister NAME VER URL [DESC]%b  Register package in local registry\n" "${GREEN}" "${RESET}"
-  printf "  %binstall NAME%b               Install package from registry\n" "${GREEN}" "${RESET}"
-  printf "  %breinstall NAME%b             Force reinstall package\n" "${GREEN}" "${RESET}"
-  printf "  %bremove NAME%b                Remove installed package\n" "${GREEN}" "${RESET}"
-  printf "  %blist%b                       List installed packages\n" "${GREEN}" "${RESET}"
-  printf "  %bsearch PATTERN%b             Search registry entries\n" "${GREEN}" "${RESET}"
-  printf "  %bshow NAME%b                  Show registry entry details\n" "${GREEN}" "${RESET}"
-  printf "  %bclean%b                      Clean cache\n" "${GREEN}" "${RESET}"
-  printf "  %bdoctor%b                     Diagnose environment\n\n" "${GREEN}" "${RESET}"
+  printf "%sCore commands:%s\n" "$BOLD" "$RESET"
+  printf "  %sinit%s                       Initialize vmpkg directories\n" "$GREEN" "$RESET"
+  printf "  %sregister NAME VER URL [DESC]%s  Register package in local registry\n" "$GREEN" "$RESET"
+  printf "  %sinstall NAME%s               Install package from registry\n" "$GREEN" "$RESET"
+  printf "  %sreinstall NAME%s             Force reinstall package\n" "$GREEN" "$RESET"
+  printf "  %sremove NAME%s                Remove installed package\n" "$GREEN" "$RESET"
+  printf "  %slist%s                       List installed packages\n" "$GREEN" "$RESET"
+  printf "  %ssearch PATTERN%s             Search registry entries\n" "$GREEN" "$RESET"
+  printf "  %sshow NAME%s                  Show registry entry details\n" "$GREEN" "$RESET"
+  printf "  %sclean%s                      Clean cache\n" "$GREEN" "$RESET"
+  printf "  %sdoctor%s                     Diagnose environment\n\n" "$GREEN" "$RESET"
 
-  printf "%bSystem helpers (optional eye-candy):%b\n" "${BOLD}" "${RESET}"
-  printf "  %bsys-info%b                   Basic system info\n" "${GREEN}" "${RESET}"
-  printf "  %bkernel%b                     Kernel version\n" "${GREEN}" "${RESET}"
-  printf "  %bdisk%b                       Disk usage\n" "${GREEN}" "${RESET}"
-  printf "  %bmem%b                        Memory usage\n" "${GREEN}" "${RESET}"
-  printf "  %btop%b                        htop/top\n" "${GREEN}" "${RESET}"
-  printf "  %bps%b                         Top processes by memory\n" "${GREEN}" "${RESET}"
-  printf "  %bip%b                         Network info\n\n" "${GREEN}" "${RESET}"
-
-  printf "%bEnvironment:%b\n" "${BOLD}" "${RESET}"
-  printf "  %bVMPKG_ROOT%b                Root dir (default: ~/.vmpkg)\n" "${YELLOW}" "${RESET}"
-  printf "  %bVMPKG_BIN%b                 Bin dir (default: ~/.local/bin)\n" "${YELLOW}" "${RESET}"
-  printf "  %bVMPKG_ASSUME_YES=1%b        Assume yes for prompts\n" "${YELLOW}" "${RESET}"
-  printf "  %bVMPKG_DRY_RUN=1%b           Global dry-run\n" "${YELLOW}" "${RESET}"
-  printf "  %bVMPKG_NO_COLOR=1%b          Disable colors\n" "${YELLOW}" "${RESET}"
-  printf "  %bVMPKG_DEBUG=1%b             Debug logs\n" "${YELLOW}" "${RESET}"
-  printf "  %bVMPKG_QUIET=1%b             Hide info logs\n" "${YELLOW}" "${RESET}"
+  printf "%sEnvironment:%s\n" "$BOLD" "$RESET"
+  printf "  %sVMPKG_ROOT%s                Root dir (default: ~/.vmpkg)\n" "$YELLOW" "$RESET"
+  printf "  %sVMPKG_BIN%s                 Bin dir (default: ~/.local/bin)\n" "$YELLOW" "$RESET"
+  printf "  %sVMPKG_ASSUME_YES=1%s        Assume yes for prompts\n" "$YELLOW" "$RESET"
+  printf "  %sVMPKG_DRY_RUN=1%s           Global dry-run\n" "$YELLOW" "$RESET"
+  printf "  %sVMPKG_NO_COLOR=1%s          Disable colors\n" "$YELLOW" "$RESET"
+  printf "  %sVMPKG_DEBUG=1%s             Debug logs\n" "$YELLOW" "$RESET"
+  printf "  %sVMPKG_QUIET=1%s             Hide info logs\n" "$YELLOW" "$RESET"
 }
 
 cmd_init() {
   ui_title "Initializing vmpkg"
   ensure_layout
-  log_success "Initialized vmpkg at: ${VMPKG_ROOT}"
-  log "Bin directory: ${VMPKG_BIN}"
+  log_success "Initialized vmpkg at: $VMPKG_ROOT"
+  log "Bin directory: $VMPKG_BIN"
   if [[ ":$PATH:" != *":$VMPKG_BIN:"* ]]; then
     echo
-    printf "%bNOTE:%b Add this to your shell config (e.g. ~/.bashrc or ~/.zshrc):\n" "${YELLOW}" "${RESET}"
+    printf "%sNOTE:%s Add this to your shell config (e.g. ~/.bashrc or ~/.zshrc):\n" "$YELLOW" "$RESET"
     printf "  export PATH=\"%s:\$PATH\"\n" "$VMPKG_BIN"
   fi
 }
@@ -420,13 +411,13 @@ cmd_register() {
     return 1
   fi
 
-  if [[ "${VMPKG_DRY_RUN}" -eq 1 ]]; then
-    log "[DRY-RUN] Would register package in: ${VMPKG_REGISTRY}"
+  if [[ "$VMPKG_DRY_RUN" -eq 1 ]]; then
+    log "[DRY-RUN] Would register package in: $VMPKG_REGISTRY"
     return 0
   fi
 
   registry_register "$name" "$version" "$url" "$desc"
-  log_success "Registry updated: ${VMPKG_REGISTRY}"
+  log_success "Registry updated: $VMPKG_REGISTRY"
 }
 
 cmd_search() {
@@ -436,7 +427,7 @@ cmd_search() {
   fi
   local pat="$1"
   ui_title "Search registry"
-  echo "Registry file: ${VMPKG_REGISTRY}"
+  echo "Registry file: $VMPKG_REGISTRY"
   echo
   if ! grep -i "$pat" "$VMPKG_REGISTRY" | grep -v '^[[:space:]]*#'; then
     echo "No matches."
@@ -452,7 +443,7 @@ cmd_show() {
   local line
   line="$(registry_find_line "$name")"
   if [[ -z "$line" ]]; then
-    die "Package '${name}' not found in registry."
+    die "Package '$name' not found in registry."
   fi
 
   ui_title "Package details"
@@ -480,22 +471,22 @@ link_binaries() {
   fi
 
   if [[ -d "$candidate_root/bin" ]]; then
-    log "Linking executables from: ${candidate_root}/bin -> ${VMPKG_BIN}"
+    log "Linking executables from: $candidate_root/bin -> $VMPKG_BIN"
     local f base link_path
     for f in "$candidate_root/bin"/*; do
       [[ -f "$f" && -x "$f" ]] || continue
       base="$(basename "$f")"
       link_path="$VMPKG_BIN/$base"
 
-      if [[ "${VMPKG_DRY_RUN}" -eq 1 ]]; then
-        log "[DRY-RUN] Would link ${link_path} -> ${f}"
+      if [[ "$VMPKG_DRY_RUN" -eq 1 ]]; then
+        log "[DRY-RUN] Would link $link_path -> $f"
       else
         ln -sf "$f" "$link_path"
       fi
       bin_links+=("$link_path")
     done
   else
-    warn "No bin/ directory found for package '${name}'. No symlinks created."
+    warn "No bin/ directory found for package '$name'. No symlinks created."
   fi
 
   local joined=""
@@ -516,7 +507,7 @@ cmd_install_internal() {
   local line
   line="$(registry_find_line "$name")"
   if [[ -z "$line" ]]; then
-    die "Package '${name}' not found in registry. Use 'vmpkg register' first."
+    die "Package '$name' not found in registry. Use 'vmpkg register' first."
   fi
 
   local n ver url desc
@@ -534,9 +525,9 @@ cmd_install_internal() {
   printf "Bin dir:     %s\n" "$VMPKG_BIN"
   echo
 
-  if [[ -d "$install_dir" && "${reinstall_mode}" -eq 0 ]]; then
-    warn "Package appears already installed at: ${install_dir}"
-    warn "Use 'vmpkg reinstall ${name}' to force reinstall."
+  if [[ -d "$install_dir" && "$reinstall_mode" -eq 0 ]]; then
+    warn "Package appears already installed at: $install_dir"
+    warn "Use 'vmpkg reinstall $name' to force reinstall."
     return 0
   fi
 
@@ -546,7 +537,7 @@ cmd_install_internal() {
 
   download_file "$url" "$archive"
 
-  if [[ "${VMPKG_DRY_RUN}" -eq 1 ]]; then
+  if [[ "$VMPKG_DRY_RUN" -eq 1 ]]; then
     log "[DRY-RUN] Skipping extract & link steps."
     return 0
   fi
@@ -561,7 +552,7 @@ cmd_install_internal() {
 
   manifest_write "$name" "$ver" "$install_dir" "$bin_links"
 
-  log_success "Package '${name}' installed."
+  log_success "Package '$name' installed."
   echo
   ui_hr
   if [[ -n "$bin_links" ]]; then
@@ -602,7 +593,7 @@ cmd_remove() {
   mf="$(manifest_path_for "$name")"
 
   if [[ ! -f "$mf" ]]; then
-    die "Package '${name}' is not installed (manifest not found: ${mf})."
+    die "Package '$name' is not installed (manifest not found: $mf)."
   fi
 
   local install_dir bin_links
@@ -620,7 +611,7 @@ cmd_remove() {
     return 1
   fi
 
-  if [[ "${VMPKG_DRY_RUN}" -eq 1 ]]; then
+  if [[ "$VMPKG_DRY_RUN" -eq 1 ]]; then
     log "[DRY-RUN] Would remove install dir, manifest, and symlinks."
     return 0
   fi
@@ -631,21 +622,21 @@ cmd_remove() {
     for l in "${arr[@]}"; do
       [[ -z "$l" ]] && continue
       if [[ -L "$l" || -f "$l" ]]; then
-        log "Removing link: ${l}"
+        log "Removing link: $l"
         rm -f "$l"
       fi
     done
   fi
 
   if [[ -n "$install_dir" && -d "$install_dir" ]]; then
-    log "Removing directory: ${install_dir}"
+    log "Removing directory: $install_dir"
     rm -rf "$install_dir"
   fi
 
-  log "Removing manifest: ${mf}"
+  log "Removing manifest: $mf"
   rm -f "$mf"
 
-  log_success "Package '${name}' removed."
+  log_success "Package '$name' removed."
 }
 
 cmd_list() {
@@ -653,7 +644,8 @@ cmd_list() {
   ui_title "Installed packages"
   local mf
   local any=0
-  for mf in "$VMPKG_DB"/*.manifest 2>/dev/null; do
+  shopt -s nullglob
+  for mf in "$VMPKG_DB"/*.manifest; do
     [[ -f "$mf" ]] || continue
     any=1
     local name ver
@@ -661,6 +653,7 @@ cmd_list() {
     ver="$(manifest_read_var "$mf" "version" || echo "?")"
     printf "  %-24s %s\n" "$name" "$ver"
   done
+  shopt -u nullglob
   if [[ "$any" -eq 0 ]]; then
     echo "  (none)"
   fi
@@ -669,13 +662,13 @@ cmd_list() {
 cmd_clean() {
   ensure_layout
   ui_title "Clean cache"
-  echo "Cache directory: ${VMPKG_CACHE}"
+  echo "Cache directory: $VMPKG_CACHE"
   echo
   if ! vmpkg_confirm "Remove all cached package archives?"; then
     return 1
   fi
-  if [[ "${VMPKG_DRY_RUN}" -eq 1 ]]; then
-    log "[DRY-RUN] Would remove cache files under ${VMPKG_CACHE}"
+  if [[ "$VMPKG_DRY_RUN" -eq 1 ]]; then
+    log "[DRY-RUN] Would remove cache files under $VMPKG_CACHE"
     return 0
   fi
   rm -rf "$VMPKG_CACHE"
@@ -695,14 +688,14 @@ cmd_doctor() {
     os_name="${PRETTY_NAME:-$NAME}"
   fi
 
-  echo "OS kernel:    ${uname_s}"
+  echo "OS kernel:    $uname_s"
   echo "OS name:      ${os_name:-Unknown}"
-  echo "Root:         ${VMPKG_ROOT}"
-  echo "Registry:     ${VMPKG_REGISTRY}"
-  echo "DB:           ${VMPKG_DB}"
-  echo "Packages:     ${VMPKG_PKGS}"
-  echo "Cache:        ${VMPKG_CACHE}"
-  echo "Bin dir:      ${VMPKG_BIN}"
+  echo "Root:         $VMPKG_ROOT"
+  echo "Registry:     $VMPKG_REGISTRY"
+  echo "DB:           $VMPKG_DB"
+  echo "Packages:     $VMPKG_PKGS"
+  echo "Cache:        $VMPKG_CACHE"
+  echo "Bin dir:      $VMPKG_BIN"
   ui_hr
 
   if command -v curl >/dev/null; then
@@ -725,103 +718,14 @@ cmd_doctor() {
     warn "unzip not found. zip archives will not work."
   fi
 
-  if command -v free >/dev/null; then
-    log_success "free detected (memory info)."
-  else
-    warn "free not found. Memory info (cmd_mem/sys-info) may be limited."
-  fi
-
   echo
   if [[ ":$PATH:" != *":$VMPKG_BIN:"* ]]; then
     warn "VMPKG_BIN is not in your PATH. Binaries may not be reachable by name."
-    echo "    Bin dir: ${VMPKG_BIN}"
+    echo "    Bin dir: $VMPKG_BIN"
     echo "    Example fix:"
     echo "      export PATH=\"${VMPKG_BIN}:\$PATH\""
   else
     log_success "VMPKG_BIN is in PATH."
-  fi
-}
-
-###############################################################################
-# SYSTEM HELPERS (OPTIONAL)
-###############################################################################
-
-cmd_sys_info() {
-  ui_title "System info"
-
-  echo "=== uname ==="
-  uname -a || true
-  echo
-
-  echo "=== CPU (first model line) ==="
-  local cpu_line=""
-  if [[ -r /proc/cpuinfo ]]; then
-    cpu_line="$(grep -m1 'model name' /proc/cpuinfo || true)"
-  fi
-  if [[ -n "$cpu_line" ]]; then
-    echo "$cpu_line"
-  else
-    echo "CPU info unavailable"
-  fi
-  echo
-
-  echo "=== Memory ==="
-  if command -v free >/dev/null; then
-    free -h
-  else
-    echo "free not available"
-  fi
-  echo
-
-  echo "=== Disk (/) ==="
-  if df -h / >/dev/null; then
-    df -h /
-  else
-    df -h || true
-  fi
-}
-
-cmd_kernel() {
-  ui_title "Kernel"
-  uname -a || true
-}
-
-cmd_disk() {
-  ui_title "Disk usage"
-  df -h || true
-}
-
-cmd_mem() {
-  ui_title "Memory usage"
-  if command -v free >/dev/null; then
-    free -h
-  else
-    echo "free not available"
-  fi
-}
-
-cmd_top() {
-  ui_title "Top processes"
-  if command -v htop >/dev/null; then
-    htop
-  else
-    top
-  fi
-}
-
-cmd_ps() {
-  ui_title "Top processes by memory"
-  ps aux --sort=-%mem | head -n 15
-}
-
-cmd_ip() {
-  ui_title "Network info"
-  if command -v ip >/dev/null; then
-    ip addr
-    echo
-    ip route || true
-  else
-    echo "'ip' command not found. Install iproute2 or equivalent."
   fi
 }
 
@@ -834,7 +738,7 @@ main() {
 
   case "${1-}" in
     -v|--version)
-      echo "vmpkg ${VMPKG_VERSION}"
+      echo "vmpkg $VMPKG_VERSION"
       exit 0
       ;;
   esac
@@ -847,7 +751,7 @@ main() {
 
   apply_color_mode
 
-  case "${cmd}" in
+  case "$cmd" in
     init)        cmd_init "$@" ;;
     register)    cmd_register "$@" ;;
     install)     cmd_install "$@" ;;
@@ -858,20 +762,11 @@ main() {
     show)        cmd_show "$@" ;;
     clean)       cmd_clean "$@" ;;
     doctor)      cmd_doctor "$@" ;;
-
-    sys-info)    cmd_sys_info ;;
-    kernel)      cmd_kernel ;;
-    disk)        cmd_disk ;;
-    mem)         cmd_mem ;;
-    top)         cmd_top ;;
-    ps)          cmd_ps ;;
-    ip)          cmd_ip ;;
-
     ""|help|-h|--help)
       usage
       ;;
     *)
-      die "Unknown command: ${cmd}"
+      die "Unknown command: $cmd"
       ;;
   esac
 }
