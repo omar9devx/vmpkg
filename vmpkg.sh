@@ -23,15 +23,16 @@ VMPKG_ARGS=()
 # COLORS & UI
 ###############################################################################
 
-BOLD='\033[1m'
-DIM='\033[2m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-RESET='\033[0m'
+BOLD=$'\033[1m'
+DIM=$'\033[2m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[0;33m'
+RED=$'\033[0;31m'
+BLUE=$'\033[0;34m'
+MAGENTA=$'\033[0;35m'
+CYAN=$'\033[0;36m'
+RESET=$'\033[0m'
+
 
 apply_color_mode() {
   if [[ "$VMPKG_NO_COLOR" -eq 1 || -n "${NO_COLOR-}" ]]; then
