@@ -10,16 +10,16 @@ If you have **Linux + Bash + curl/wget + tar (optionally unzip)** — **VMPKG wo
 ---
 
 <p align="center">
-  <a href="https://github.com/gpteamofficial/vmpkg">
+  <a href="https://github.com/omar9devx/vmpkg">
     <img src="https://img.shields.io/badge/platform-linux-333333?logo=linux&logoColor=ffffff" alt="Platform: Linux">
   </a>
-  <a href="https://github.com/gpteamofficial/vmpkg">
+  <a href="https://github.com/omar9devx/vmpkg">
     <img src="https://img.shields.io/badge/shell-bash-4EAA25?logo=gnu-bash&logoColor=ffffff" alt="Shell: Bash">
   </a>
-  <a href="https://github.com/gpteamofficial/vmpkg/blob/main/LICENSE">
+  <a href="https://github.com/omar9devx/vmpkg/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-GPL-blue.svg" alt="License: MIT">
   </a>
-  <a href="https://github.com/gpteamofficial/vmpkg">
+  <a href="https://github.com/omar9devx/vmpkg">
     <img src="https://img.shields.io/badge/type-self--contained%20pkg%20manager-ff6f00" alt="Self-contained package manager">
   </a>
 </p>
@@ -198,13 +198,13 @@ mytool-x86_64/
 ### Recommended:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/installscript.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh)
 ```
 
 ### Alternative:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/installscript.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh | sudo bash
 ```
 
 ---
@@ -212,7 +212,7 @@ curl -fsSL https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/installsc
 ## 🛠 Maintenance
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/updatescript.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/updatescript.sh | sudo bash
 ```
 
 Options include:

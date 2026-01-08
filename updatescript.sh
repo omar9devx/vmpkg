@@ -6,7 +6,7 @@
 
 set -eu
 
-VMPKG_URL="https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/vmpkg"
+VMPKG_URL="https://raw.githubusercontent.com/omar9devx/vmpkg/main/vmpkg"
 VMPKG_DEST="/bin/vmpkg"
 VMPKG_BAK="/bin/vmpkg.bak"
 

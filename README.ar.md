@@ -134,13 +134,13 @@ mytool/
 ### طريقة التثبيت الموصى بها
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/installscript.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh)
 ```
 
 ### بديل:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/installscript.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh | sudo bash
 ```
 
 ---
@@ -148,7 +148,7 @@ curl -fsSL https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/installsc
 ## 🛠 التحديث والصيانة
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gpteamofficial/vmpkg/main/updatescript.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/updatescript.sh | sudo bash
 ```
 
 يوفر:
