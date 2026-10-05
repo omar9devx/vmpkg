@@ -14,7 +14,7 @@ If you have **Linux + Bash + curl/wget + tar (optionally unzip)** — **VMPKG wo
     <img src="https://github.com/omar9devx/vmpkg/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
   <a href="https://github.com/omar9devx/vmpkg">
-    <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version: 1.3.0">
+    <img src="https://img.shields.io/badge/version-1.4.0-blue.svg" alt="Version: 1.4.0">
   </a>
   <a href="https://github.com/omar9devx/vmpkg">
     <img src="https://img.shields.io/badge/platform-linux-333333?logo=linux&logoColor=ffffff" alt="Platform: Linux">
@@ -244,17 +244,24 @@ Options include:
 ```bash
 vmpkg init
 vmpkg register <name> <version> <url> [description...] [sha256]
-vmpkg install <name>
+vmpkg install <name>          # (alias: i, add)
 vmpkg reinstall <name>
-vmpkg upgrade [name]
-vmpkg remove <name>
+vmpkg upgrade [name]          # (alias: up, upg)
+vmpkg pin <name>              # Hold package version from auto-upgrading
+vmpkg unpin <name>
+vmpkg remove <name>           # (alias: rm, del)
 
-vmpkg list
-vmpkg search <pattern>
-vmpkg show <name>
+vmpkg list                    # (alias: ls)
+vmpkg search <pattern>        # (alias: s, find)
+vmpkg show <name>             # (alias: info)
+vmpkg which <command>         # Identify which package provides a binary
+
+vmpkg export [bundle.txt]     # Export installed packages list
+vmpkg import <bundle.txt>     # Restore packages from exported list
+vmpkg env                     # Output shell environment exports
 
 vmpkg clean
-vmpkg doctor
+vmpkg doctor                  # (alias: status)
 ```
 
 ---

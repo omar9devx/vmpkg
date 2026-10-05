@@ -23,7 +23,7 @@
     <img src="https://github.com/omar9devx/vmpkg/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
   <a href="https://github.com/omar9devx/vmpkg">
-    <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version: 1.3.0">
+    <img src="https://img.shields.io/badge/version-1.4.0-blue.svg" alt="Version: 1.4.0">
   </a>
   <a href="https://github.com/omar9devx/vmpkg">
     <img src="https://img.shields.io/badge/platform-linux-333333?logo=linux&logoColor=ffffff" alt="Platform: Linux">
@@ -199,15 +199,21 @@ curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/updatescript.s
 ```bash
 vmpkg init                  # تهيئة المجلدات الأساسية
 vmpkg register …            # تسجيل حزمة في السجل (مع دعم sha256)
-vmpkg install <name>        # تثبيت حزمة
+vmpkg install <name>        # تثبيت حزمة (اختصارات: i, add)
 vmpkg reinstall <name>      # إعادة التثبيت
-vmpkg upgrade [name]        # فحص وترقية الحزم إلى إصدار أحدث
-vmpkg remove <name>         # إزالة حزمة
-vmpkg list                  # عرض الحزم المثبتة
-vmpkg search <pattern>      # البحث في السجل
-vmpkg show <name>           # عرض تفاصيل حزمة
+vmpkg upgrade [name]        # فحص وترقية الحزم (اختصارات: up, upg)
+vmpkg pin <name>            # تثبيت إصدار الحزمة ومنع ترقيتها تلقائياً
+vmpkg unpin <name>          # إلغاء تثبيت الإصدار والسماح بالترقية
+vmpkg remove <name>         # إزالة حزمة (اختصارات: rm, del)
+vmpkg list                  # عرض الحزم المثبتة (اختصار: ls)
+vmpkg search <pattern>      # البحث في السجل (اختصارات: s, find)
+vmpkg show <name>           # عرض تفاصيل حزمة (اختصار: info)
+vmpkg which <command>       # معرفة أي حزمة توفر هذا الأمر التنفيذي
+vmpkg export [file]         # تصدير قائمة وحزم النظام إلى ملف
+vmpkg import <file>         # استيراد وتثبيت الحزم من ملف التصدير
+vmpkg env                   # طباعة مسارات وإعدادات الطرفية الجاهزة
 vmpkg clean                 # تنظيف الكاش
-vmpkg doctor                # فحص البيئة والتحذيرات
+vmpkg doctor                # فحص البيئة والتحذيرات (اختصار: status)
 ```
 
 ---

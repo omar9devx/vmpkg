@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
-# VMPKG Installer
-# Installs vmpkg into /bin/vmpkg (or configured path) and ensures curl/wget is available.
-# - Polite confirmation before doing anything (unless -y)
+# VMPKG Installer - Omar9DevX
+# Installs vmpkg into ~/.local/bin/vmpkg (or /usr/local/bin/vmpkg)
+# - Seamless user-space install without sudo
+# - Frictionless execution for curl ... | bash and bash <(curl ...)
 # - POSIX sh compatible
-# - Uses system package manager *only* to install curl if missing
 
 set -eu
 
@@ -12,7 +12,6 @@ VMPKG_DEST="${VMPKG_DEST:-}"
 
 PKG_MGR=""
 PKG_FAMILY=""
-AUTO_YES=0
 
 # --------------- colors (TTY-safe) ---------------
 
@@ -52,13 +51,16 @@ fail() {
 usage() {
   printf 'Usage: %s [OPTIONS]\n' "$0"
   printf '\nOptions:\n'
-  printf '  -y, --yes, --assume-yes   Run non-interactively (assume "yes" to prompts)\n'
+  printf '  --dest PATH               Custom installation binary path\n'
+  printf '  -y, --yes, --assume-yes   Non-interactive mode (default)\n'
   printf '  -h, --help                Show this help and exit\n'
 }
 
 detect_dest() {
   if [ -z "${VMPKG_DEST:-}" ]; then
     if [ "$(id -u)" -eq 0 ]; then
+      VMPKG_DEST="/usr/local/bin/vmpkg"
+    elif [ -w "/usr/local/bin" ]; then
       VMPKG_DEST="/usr/local/bin/vmpkg"
     else
       VMPKG_DEST="$HOME/.local/bin/vmpkg"
@@ -95,47 +97,6 @@ detect_pkg_mgr() {
   fi
 }
 
-ask_confirmation() {
-  # $1 = message, $2 = default (Y/N, optional, default N)
-  msg=$1
-  default=${2:-N}
-
-  # non-interactive mode: always yes
-  if [ "$AUTO_YES" -eq 1 ]; then
-    log "AUTO_YES enabled; auto-confirming: $msg"
-    return 0
-  fi
-
-  case "$default" in
-    Y|y)
-      prompt="[Y/n]"
-      def="Y"
-      ;;
-    *)
-      prompt="[y/N]"
-      def="N"
-      ;;
-  esac
-
-  printf '%s[vmpkg-installer][PROMPT]%s %s %s ' "$C_WARN" "$C_RESET" "$msg" "$prompt" >&2
-  if ! read -r ans </dev/tty; then
-    return 1
-  fi
-
-  if [ -z "$ans" ]; then
-    ans="$def"
-  fi
-
-  case "$ans" in
-    Y|y|yes|YES)
-      return 0
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
 install_curl_if_needed() {
   if command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; then
     return 0
@@ -144,29 +105,31 @@ install_curl_if_needed() {
   detect_pkg_mgr
 
   if [ -z "$PKG_MGR" ]; then
-    fail "No supported package manager found to install curl (pacman/apt/dnf/yum/zypper/apk). Install curl or wget manually and rerun."
+    fail "Neither curl nor wget is found, and no supported package manager detected."
   fi
 
   log "Neither curl nor wget found. Installing curl using ${PKG_MGR}..."
+  SUDO=""
+  [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1 && SUDO="sudo"
 
   case "$PKG_FAMILY" in
     debian)
-      "$PKG_MGR" update -y 2>/dev/null || "$PKG_MGR" update || true
-      "$PKG_MGR" install -y curl
+      $SUDO "$PKG_MGR" update -y 2>/dev/null || true
+      $SUDO "$PKG_MGR" install -y curl
       ;;
     arch)
-      pacman -Sy --noconfirm curl
+      $SUDO pacman -Sy --noconfirm curl
       ;;
     redhat)
-      "$PKG_MGR" install -y curl
+      $SUDO "$PKG_MGR" install -y curl
       ;;
     suse)
-      zypper refresh || true
-      zypper install -y curl
+      $SUDO zypper refresh || true
+      $SUDO zypper install -y curl
       ;;
     alpine)
-      apk update || true
-      apk add curl
+      $SUDO apk update || true
+      $SUDO apk add --no-cache curl
       ;;
     *)
       fail "Unsupported package manager family '${PKG_FAMILY}' for installing curl."
@@ -177,14 +140,14 @@ install_curl_if_needed() {
     fail "Failed to install curl. Please install curl or wget manually, then rerun."
   fi
 
-  ok "curl (or wget) is now available."
+  ok "curl is now available."
 }
 
 download_vmpkg() {
   tmpfile="$(mktemp /tmp/vmpkg.XXXXXX.sh)"
 
   if command -v curl >/dev/null 2>&1; then
-    log "Downloading VMPKG using curl..."
+    log "Downloading VMPKG..."
     if ! curl -fsSL "$VMPKG_URL" -o "$tmpfile"; then
       rm -f "$tmpfile"
       fail "Failed to download VMPKG (curl)."
@@ -197,7 +160,7 @@ download_vmpkg() {
     fi
   else
     rm -f "$tmpfile"
-    fail "Neither curl nor wget available after installation step. Aborting."
+    fail "Neither curl nor wget available. Aborting."
   fi
 
   if [ ! -s "$tmpfile" ]; then
@@ -205,39 +168,67 @@ download_vmpkg() {
     fail "Downloaded file is empty. Check network or VMPKG_URL."
   fi
 
-  ok "VMPKG script downloaded to temporary file."
+  ok "Downloaded."
   printf '%s\n' "$tmpfile"
 }
 
 install_vmpkg() {
   src=$1
+  dest_dir="$(dirname "$VMPKG_DEST")"
 
   log "Installing VMPKG to ${VMPKG_DEST} ..."
-  mkdir -p "$(dirname "$VMPKG_DEST")"
-
-  mv "$src" "$VMPKG_DEST"
-  chmod 0755 "$VMPKG_DEST"
+  if [ -w "$dest_dir" ] || [ "$(id -u)" -eq 0 ]; then
+    mkdir -p "$dest_dir"
+    mv -f "$src" "$VMPKG_DEST"
+    chmod 0755 "$VMPKG_DEST"
+  elif command -v sudo >/dev/null 2>&1; then
+    if sudo mkdir -p "$dest_dir" 2>/dev/null && sudo mv -f "$src" "$VMPKG_DEST" 2>/dev/null; then
+      sudo chmod 0755 "$VMPKG_DEST"
+    else
+      warn "Permission denied for $VMPKG_DEST; falling back to $HOME/.local/bin/vmpkg..."
+      VMPKG_DEST="$HOME/.local/bin/vmpkg"
+      mkdir -p "$HOME/.local/bin"
+      mv -f "$src" "$VMPKG_DEST"
+      chmod 0755 "$VMPKG_DEST"
+    fi
+  else
+    warn "Installing to user-space at $HOME/.local/bin/vmpkg..."
+    VMPKG_DEST="$HOME/.local/bin/vmpkg"
+    mkdir -p "$HOME/.local/bin"
+    mv -f "$src" "$VMPKG_DEST"
+    chmod 0755 "$VMPKG_DEST"
+  fi
 
   ok "VMPKG installed successfully at: ${VMPKG_DEST}"
 }
 
 print_summary() {
-  printf '\n%sVMPKG installation completed.%s\n\n' "$C_OK" "$C_RESET"
-  printf 'Binary location:\n  %s\n\n' "$VMPKG_DEST"
-  printf 'Basic usage:\n'
+  printf '\n%s==================================================%s\n' "$C_OK" "$C_RESET"
+  printf '%s     VMPKG 1.4.0 Installation Complete!          %s\n' "$C_OK" "$C_RESET"
+  printf '%s==================================================%s\n\n' "$C_OK" "$C_RESET"
+  printf 'Binary location: %s\n' "$VMPKG_DEST"
+  case ":$PATH:" in
+    *":$(dirname "$VMPKG_DEST"):*") ;;
+    *) warn "$(dirname "$VMPKG_DEST") is not in your PATH. Add it to ~/.bashrc or ~/.zshrc:\n  export PATH=\"$(dirname "$VMPKG_DEST"):\$PATH\"" ;;
+  esac
+  printf '\nBasic commands:\n'
   printf '  vmpkg init\n'
-  printf '  vmpkg register <name> <version> <url> [description...]\n'
+  printf '  vmpkg register <name> <version> <url> [desc] [sha256]\n'
   printf '  vmpkg install <name>\n'
+  printf '  vmpkg upgrade [name]\n'
+  printf '  vmpkg which <command>\n'
   printf '  vmpkg list\n'
   printf '  vmpkg show <name>\n\n'
-  printf 'VMPKG is a self-contained user-space package manager for Linux.\n'
 }
 
 parse_args() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
+      --dest)
+        shift
+        [ "$#" -gt 0 ] && VMPKG_DEST="$1" || fail "--dest requires a path"
+        ;;
       -y|--yes|--assume-yes)
-        AUTO_YES=1
         ;;
       -h|--help)
         usage
@@ -256,22 +247,12 @@ parse_args() {
 main() {
   parse_args "$@"
   detect_pkg_mgr
-
-  log "Welcome to the VMPKG installer."
-
-  log "Planned actions:"
-  log "  - Ensure curl or wget is installed."
-  log "  - Download VMPKG from: $VMPKG_URL"
-  log "  - Install VMPKG to:   $VMPKG_DEST"
-
-  if ! ask_confirmation "Do you want to continue with these actions?" "N"; then
-    warn "Installation aborted by user; nothing was changed."
-    exit 0
-  fi
-
   detect_dest
-  install_curl_if_needed
 
+  log "Starting VMPKG installation..."
+  log "Target destination: $VMPKG_DEST"
+
+  install_curl_if_needed
   tmpfile="$(download_vmpkg)"
   install_vmpkg "$tmpfile"
   print_summary

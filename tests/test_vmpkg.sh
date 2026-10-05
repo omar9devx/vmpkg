@@ -34,6 +34,7 @@ run_test "POSIX sh syntax (updatescript.sh)" sh -n "${SCRIPT_DIR}/updatescript.s
 run_test "vmpkg --version" bash "$VMPKG" --version
 run_test "vmpkg --help" bash "$VMPKG" --help
 run_test "vmpkg --no-color --help" bash "$VMPKG" --no-color --help
+run_test "vmpkg env" bash "$VMPKG" env
 
 # 3. Isolated Environment Tests
 TEST_DIR="$(mktemp -d /tmp/vmpkg-test-XXXXXX)"
@@ -43,10 +44,12 @@ export VMPKG_ASSUME_YES=1
 
 run_test "vmpkg init (isolated layout)" bash "$VMPKG" init
 run_test "vmpkg doctor (environment check)" bash "$VMPKG" doctor
+run_test "vmpkg status alias" bash "$VMPKG" status
 
 # 4. Registry operations
 run_test "vmpkg register (package entry)" bash "$VMPKG" register dummy 1.0.0 "https://example.com/dummy.tar.gz" "Dummy package for test"
 run_test "vmpkg search (dummy)" bash "$VMPKG" search dummy
+run_test "vmpkg s alias (dummy)" bash "$VMPKG" s dummy
 run_test "vmpkg show (dummy)" bash "$VMPKG" show dummy
 run_test "vmpkg info alias (dummy)" bash "$VMPKG" info dummy
 
@@ -69,18 +72,38 @@ run_test "vmpkg install (samplepkg)" bash "$VMPKG" install samplepkg
 # Verify installed binary
 test -x "${VMPKG_BIN}/hello-vmpkg" && run_test "Installed binary execution" "${VMPKG_BIN}/hello-vmpkg"
 
-# Check list
-run_test "vmpkg list (verify installed)" bash "$VMPKG" list
+# Check which command
+run_test "vmpkg which hello-vmpkg" bash "$VMPKG" which hello-vmpkg
 
-# Check upgrade command
+# Check list & alias
+run_test "vmpkg list (verify installed)" bash "$VMPKG" list
+run_test "vmpkg ls alias" bash "$VMPKG" ls
+
+# Check pin & unpin
+run_test "vmpkg pin samplepkg" bash "$VMPKG" pin samplepkg
+run_test "vmpkg upgrade with pin" bash "$VMPKG" upgrade
+run_test "vmpkg unpin samplepkg" bash "$VMPKG" unpin samplepkg
+
+# Check export & import
+BUNDLE_FILE="${TEST_DIR}/bundle.txt"
+run_test "vmpkg export" bash "$VMPKG" export "$BUNDLE_FILE"
+test -s "$BUNDLE_FILE" && run_test "Verified bundle file non-empty" true
+
+# Check upgrade command & alias
 run_test "vmpkg upgrade (all up to date)" bash "$VMPKG" upgrade
+run_test "vmpkg up alias" bash "$VMPKG" up
 
 # Check clean
 run_test "vmpkg clean (cache clearing)" bash "$VMPKG" clean
 
-# Check remove
+# Check remove & alias
 run_test "vmpkg remove (samplepkg)" bash "$VMPKG" remove samplepkg
 test ! -e "${VMPKG_BIN}/hello-vmpkg" && run_test "Verified symlink removal" true
+
+# Test import after removal
+run_test "vmpkg import (restore bundle)" bash "$VMPKG" import "$BUNDLE_FILE"
+test -x "${VMPKG_BIN}/hello-vmpkg" && run_test "Verified re-installed binary after import" true
+run_test "vmpkg rm alias" bash "$VMPKG" rm samplepkg
 
 # Teardown
 rm -rf "$TEST_DIR"

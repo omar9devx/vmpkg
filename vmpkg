@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-VMPKG_VERSION="1.3.0"
+VMPKG_VERSION="1.4.0"
 
 ###############################################################################
 # ENV / FLAGS
@@ -171,6 +171,7 @@ vmpkg_confirm() {
 
 VMPKG_ROOT="${VMPKG_ROOT:-"$HOME/.vmpkg"}"
 VMPKG_REGISTRY="${VMPKG_REGISTRY:-"$VMPKG_ROOT/registry"}"
+VMPKG_PINNED="${VMPKG_PINNED:-"$VMPKG_ROOT/pinned"}"
 VMPKG_DB="$VMPKG_ROOT/db"
 VMPKG_PKGS="$VMPKG_ROOT/pkgs"
 VMPKG_CACHE="$VMPKG_ROOT/cache"
@@ -327,7 +328,7 @@ registry_find_line() {
 }
 
 registry_register() {
-  local name="$1" version="$2" url="$3" desc="$4"
+  local name="$1" version="$2" url="$3" desc="${4:-}" sha256="${5:-}"
 
   if [[ "$name" == *"|"* ]]; then
     die "Package name must not contain '|'."
@@ -343,7 +344,11 @@ registry_register() {
     ' "$VMPKG_REGISTRY" >"$tmp" || true
   fi
 
-  printf '%s|%s|%s|%s\n' "$name" "$version" "$url" "$desc" >>"$tmp"
+  if [[ -n "$sha256" ]]; then
+    printf '%s|%s|%s|%s|%s\n' "$name" "$version" "$url" "$desc" "$sha256" >>"$tmp"
+  else
+    printf '%s|%s|%s|%s\n' "$name" "$version" "$url" "$desc" >>"$tmp"
+  fi
   mv "$tmp" "$VMPKG_REGISTRY"
 
   log "Registered package '$name' version '$version'."
@@ -635,6 +640,43 @@ cmd_reinstall() {
 }
 
 
+
+is_pinned() {
+  local name="$1"
+  [[ -f "$VMPKG_PINNED" ]] && grep -qx "$name" "$VMPKG_PINNED" 2>/dev/null
+}
+
+cmd_pin() {
+  ensure_layout
+  if [[ $# -eq 0 ]]; then
+    die "You must specify a package name to pin."
+  fi
+  local name="$1"
+  if is_pinned "$name"; then
+    log "Package '$name' is already pinned."
+    return 0
+  fi
+  echo "$name" >> "$VMPKG_PINNED"
+  log_success "Pinned package '$name'. It will be held and skipped during upgrades."
+}
+
+cmd_unpin() {
+  ensure_layout
+  if [[ $# -eq 0 ]]; then
+    die "You must specify a package name to unpin."
+  fi
+  local name="$1"
+  if [[ ! -f "$VMPKG_PINNED" ]]; then
+    warn "No packages are currently pinned."
+    return 0
+  fi
+  local tmp
+  tmp="$(mktemp "${VMPKG_ROOT}/pinned.XXXXXX")"
+  grep -vx "$name" "$VMPKG_PINNED" > "$tmp" || true
+  mv "$tmp" "$VMPKG_PINNED"
+  log_success "Unpinned package '$name'."
+}
+
 cmd_upgrade() {
   ensure_layout
   local target_pkg="${1:-}"
@@ -659,6 +701,10 @@ cmd_upgrade() {
     if [[ -n "$line" ]]; then
       local n reg_ver url desc sha256
       IFS='|' read -r n reg_ver url desc sha256 <<<"$line"
+      if is_pinned "$name"; then
+        log "Package '$name' is pinned at version $cur_ver. Skipping upgrade."
+        continue
+      fi
       if [[ "$reg_ver" != "$cur_ver" ]]; then
         log "Update available for '$name': $cur_ver -> $reg_ver"
         if cmd_install_internal "$name" 1; then
@@ -773,6 +819,109 @@ cmd_clean() {
   log_success "Cache cleaned."
 }
 
+
+cmd_which() {
+  ensure_layout
+  if [[ $# -eq 0 ]]; then
+    die "Usage: vmpkg which <command>"
+  fi
+  local target="$1"
+  local found=0
+  local symlink="$VMPKG_BIN/$target"
+
+  ui_title "Lookup command '$target'"
+  if [[ -L "$symlink" || -f "$symlink" ]]; then
+    local target_path
+    target_path="$(readlink -f "$symlink" 2>/dev/null || echo "$symlink")"
+    printf "Binary symlink:  %s\n" "$symlink"
+    printf "Actual path:     %s\n" "$target_path"
+    
+    shopt -s nullglob
+    for mf in "$VMPKG_DB"/*.manifest; do
+      [[ -f "$mf" ]] || continue
+      local bin_links name ver
+      bin_links="$(manifest_read_var "$mf" "bin_links" || true)"
+      if [[ "$bin_links" == *"$symlink"* ]]; then
+        name="$(manifest_read_var "$mf" "name" || echo "?")"
+        ver="$(manifest_read_var "$mf" "version" || echo "?")"
+        printf "Package:         %s\n" "$name"
+        printf "Version:         %s\n" "$ver"
+        found=1
+        break
+      fi
+    done
+    shopt -u nullglob
+  fi
+
+  if [[ "$found" -eq 0 ]]; then
+    warn "Command '$target' is not provided by any installed vmpkg package."
+    return 1
+  fi
+}
+
+cmd_env() {
+  cat << EOF
+export VMPKG_ROOT="${VMPKG_ROOT}"
+export VMPKG_BIN="${VMPKG_BIN}"
+case ":\${PATH}:" in
+  *":${VMPKG_BIN}:"*) ;;
+  *) export PATH="${VMPKG_BIN}:\${PATH}" ;;
+esac
+EOF
+}
+
+cmd_export() {
+  ensure_layout
+  local out="${1:-}"
+  local tmp
+  tmp="$(mktemp "${VMPKG_ROOT}/export.XXXXXX")"
+
+  printf "# VMPKG Package Bundle Export\n" >> "$tmp"
+  printf "# Format: name|version|url|description|sha256\n" >> "$tmp"
+  
+  shopt -s nullglob
+  local count=0
+  for mf in "$VMPKG_DB"/*.manifest; do
+    [[ -f "$mf" ]] || continue
+    local name
+    name="$(manifest_read_var "$mf" "name" || true)"
+    local line
+    line="$(registry_find_line "$name")"
+    if [[ -n "$line" ]]; then
+      printf "%s\n" "$line" >> "$tmp"
+      ((count++)) || true
+    fi
+  done
+  shopt -u nullglob
+
+  if [[ -n "$out" ]]; then
+    mv "$tmp" "$out"
+    log_success "Exported $count package(s) to $out"
+  else
+    cat "$tmp"
+    rm -f "$tmp"
+  fi
+}
+
+cmd_import() {
+  ensure_layout
+  if [[ $# -eq 0 || ! -f "$1" ]]; then
+    die "Usage: vmpkg import <file>"
+  fi
+  local file="$1"
+  ui_title "Importing packages from $file"
+  local imported=0
+  while IFS='|' read -r name ver url desc sha256 || [[ -n "$name" ]]; do
+    [[ -z "$name" || "$name" =~ ^# ]] && continue
+    log "Processing: $name ($ver)..."
+    registry_register "$name" "$ver" "$url" "${desc:-}" "${sha256:-}"
+    if cmd_install_internal "$name" 0; then
+      ((imported++)) || true
+    fi
+  done < "$file"
+  log_success "Import complete: $imported package(s) processed."
+}
+
 cmd_doctor() {
   ensure_layout
   ui_title "vmpkg doctor"
@@ -849,17 +998,23 @@ main() {
   apply_color_mode
 
   case "$cmd" in
-    init)        cmd_init "$@" ;;
-    register)    cmd_register "$@" ;;
-    install)     cmd_install "$@" ;;
-    reinstall)   cmd_reinstall "$@" ;;
-    upgrade)     cmd_upgrade "$@" ;;
-    remove)      cmd_remove "$@" ;;
-    list)        cmd_list "$@" ;;
-    search)      cmd_search "$@" ;;
-    show|info)   cmd_show "$@" ;;
-    clean)       cmd_clean "$@" ;;
-    doctor)      cmd_doctor "$@" ;;
+    init)                     cmd_init "$@" ;;
+    register)                 cmd_register "$@" ;;
+    install|i|add)            cmd_install "$@" ;;
+    reinstall)                cmd_reinstall "$@" ;;
+    upgrade|up|upg)           cmd_upgrade "$@" ;;
+    pin)                      cmd_pin "$@" ;;
+    unpin)                    cmd_unpin "$@" ;;
+    remove|rm|del|uninstall)  cmd_remove "$@" ;;
+    list|ls)                  cmd_list "$@" ;;
+    search|s|find)            cmd_search "$@" ;;
+    show|info)                cmd_show "$@" ;;
+    which)                    cmd_which "$@" ;;
+    export)                   cmd_export "$@" ;;
+    import)                   cmd_import "$@" ;;
+    env)                      cmd_env "$@" ;;
+    clean)                    cmd_clean "$@" ;;
+    doctor|status)            cmd_doctor "$@" ;;
     ""|help|-h|--help)
       usage
       ;;
