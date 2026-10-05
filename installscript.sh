@@ -8,7 +8,7 @@
 set -eu
 
 VMPKG_URL="https://raw.githubusercontent.com/omar9devx/vmpkg/main/vmpkg"
-VMPKG_DEST="/bin/vmpkg"
+VMPKG_DEST="${VMPKG_DEST:-}"
 
 PKG_MGR=""
 PKG_FAMILY=""
@@ -56,9 +56,14 @@ usage() {
   printf '  -h, --help                Show this help and exit\n'
 }
 
-require_root() {
-  if [ "$(id -u)" -ne 0 ]; then
-    fail "This installer must be run as root. Try: sudo $0"
+detect_dest() {
+  if [ -z "${VMPKG_DEST:-}" ]; then
+    if [ "$(id -u)" -eq 0 ]; then
+      VMPKG_DEST="/usr/local/bin/vmpkg"
+    else
+      VMPKG_DEST="$HOME/.local/bin/vmpkg"
+      mkdir -p "$HOME/.local/bin"
+    fi
   fi
 }
 
@@ -264,7 +269,7 @@ main() {
     exit 0
   fi
 
-  require_root
+  detect_dest
   install_curl_if_needed
 
   tmpfile="$(download_vmpkg)"

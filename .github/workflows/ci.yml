@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Lint & Automated Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Validate Shell Syntax
+        run: |
+          bash -n vmpkg.sh
+          bash -n vmpkg
+          sh -n installscript.sh
+          sh -n updatescript.sh
+
+      - name: Run ShellCheck
+        run: |
+          shellcheck -e SC2034,SC2154,SC1090,SC1091 vmpkg.sh
+          shellcheck -e SC2034,SC2154,SC1090,SC1091 installscript.sh
+          shellcheck -e SC2034,SC2154,SC1090,SC1091 updatescript.sh
+
+      - name: Make Scripts Executable
+        run: chmod +x vmpkg vmpkg.sh installscript.sh updatescript.sh tests/test_vmpkg.sh
+
+      - name: Run Automated Test Suite
+        run: ./tests/test_vmpkg.sh

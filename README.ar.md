@@ -18,24 +18,53 @@
 
 ---
 
+<p align="center">
+  <a href="https://github.com/omar9devx/vmpkg/actions/workflows/ci.yml">
+    <img src="https://github.com/omar9devx/vmpkg/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://github.com/omar9devx/vmpkg">
+    <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version: 1.3.0">
+  </a>
+  <a href="https://github.com/omar9devx/vmpkg">
+    <img src="https://img.shields.io/badge/platform-linux-333333?logo=linux&logoColor=ffffff" alt="Platform: Linux">
+  </a>
+  <a href="https://github.com/omar9devx/vmpkg">
+    <img src="https://img.shields.io/badge/shell-bash-4EAA25?logo=gnu-bash&logoColor=ffffff" alt="Shell: Bash">
+  </a>
+  <a href="https://github.com/omar9devx/vmpkg/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-GPL-blue.svg" alt="License: MIT">
+  </a>
+  <a href="https://github.com/omar9devx/vmpkg">
+    <img src="https://img.shields.io/badge/type-self--contained%20pkg%20manager-ff6f00" alt="Self-contained package manager">
+  </a>
+</p>
+
+---
+
 ## 🧩 مميزات VMPKG
 
 - يعمل بالكامل في مستخدمك الشخصي (User‑Space)  
-- لا يحتاج إلى sudo  
+- لا يحتاج إلى صلاحيات root إطلاقاً
 - لا يتعامل مع أي مدير حزم في النظام  
 - يعمل على *جميع توزيعات لينكس*  
-- مستودع سجلات بسيط:  
-  `name|version|url|description`  
+- مستودع سجلات بسيط وسريع:  
+  `name|version|url|description|[sha256]`  
+- التحقق التلقائي من بصمة الملفات **SHA256** قبل التثبيت لضمان الأمان والنزاهة
+- فحص وتحديث تلقائي للإصدارات الأحدث عبر أمر `vmpkg upgrade`
 - يدعم أرشيفات:
   - `.tar.gz` / `.tgz`
+  - `.tar.xz`
+  - `.tar.bz2`
   - `.tar`
   - `.zip`
+- كشف ذكي لنوع الأرشيف عبر `file` والامتدادات
 - يثبّت الحزم داخل:  
   `~/.vmpkg/pkgs/<name>-<version>`  
 - يربط الملفات التنفيذية داخل:
   `~/.local/bin`  
 - آمن + يعتمد على Bash فقط  
 - واجهة أوامر جميلة وواضحة مع ألوان  
+- بيئة اختبارات مؤتمتة متكاملة وCI عبر GitHub Actions
 - يحتوي أدوات مساعدة للنظام (system helpers)
 
 ---
@@ -106,16 +135,18 @@
 ملف السجل يكون بالشكل التالي:
 
 ```
-name|version|url|description
+name|version|url|description|[sha256]
 ```
 
 مثال:
 
 ```
-rg|14.1.0|https://example.com/ripgrep-14.1.0-x86_64.tar.gz|Fast search tool
+rg|14.1.0|https://example.com/ripgrep-14.1.0-x86_64.tar.gz|Fast search tool|d68ffad399d25514f76ba202cfbe9c4b7b25055b46e311394a5303c7343e8ea2
 lazygit|0.44.0|https://example.com/lazygit-x86_64.tar.gz|Terminal UI for git
 bat|0.24.0|https://example.com/bat-0.24.0.tar.gz|cat clone with syntax highlighting
 ```
+
+> **ملاحظة:** عند تمرير قيمة `sha256`، يقوم `vmpkg` بالتحقق من صحة وبصمة ملف الأرشيف قبل فك ضغطه لحماية نظامك.
 
 تركيب الأرشيف المتوقع:
 
@@ -131,24 +162,26 @@ mytool/
 
 ## 🏗 التثبيت
 
-### طريقة التثبيت الموصى بها
+### تثبيت بمستوى المستخدم (بدون root أو sudo — موصى به):
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh)
+curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh | bash
 ```
+> سيتم تثبيت الأداة في `~/.local/bin/vmpkg`. تأكد من وجود `~/.local/bin` في مسار `$PATH`.
 
-### بديل:
+### تثبيت للنظام بالكامل (يتطلب sudo):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh | sudo bash
 ```
+> سيتم تثبيت الأداة في `/usr/local/bin/vmpkg`.
 
 ---
 
 ## 🛠 التحديث والصيانة
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/updatescript.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/updatescript.sh | bash
 ```
 
 يوفر:
@@ -164,16 +197,17 @@ curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/updatescript.s
 ## 🚀 الأوامر الأساسية
 
 ```bash
-vmpkg init             # تهيئة المجلدات الأساسية
-vmpkg register …       # تسجيل حزمة في السجل
-vmpkg install <name>   # تثبيت حزمة
-vmpkg reinstall <name> # إعادة التثبيت
-vmpkg remove <name>    # إزالة حزمة
-vmpkg list             # عرض الحزم المثبتة
-vmpkg search <pattern> # البحث في السجل
-vmpkg show <name>      # عرض تفاصيل حزمة
-vmpkg clean            # تنظيف الكاش
-vmpkg doctor           # فحص البيئة والتحذيرات
+vmpkg init                  # تهيئة المجلدات الأساسية
+vmpkg register …            # تسجيل حزمة في السجل (مع دعم sha256)
+vmpkg install <name>        # تثبيت حزمة
+vmpkg reinstall <name>      # إعادة التثبيت
+vmpkg upgrade [name]        # فحص وترقية الحزم إلى إصدار أحدث
+vmpkg remove <name>         # إزالة حزمة
+vmpkg list                  # عرض الحزم المثبتة
+vmpkg search <pattern>      # البحث في السجل
+vmpkg show <name>           # عرض تفاصيل حزمة
+vmpkg clean                 # تنظيف الكاش
+vmpkg doctor                # فحص البيئة والتحذيرات
 ```
 
 ---

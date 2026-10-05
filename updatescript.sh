@@ -7,8 +7,8 @@
 set -eu
 
 VMPKG_URL="https://raw.githubusercontent.com/omar9devx/vmpkg/main/vmpkg"
-VMPKG_DEST="/bin/vmpkg"
-VMPKG_BAK="/bin/vmpkg.bak"
+VMPKG_DEST="${VMPKG_DEST:-}"
+VMPKG_BAK="${VMPKG_BAK:-}"
 
 PKG_MGR=""
 PKG_FAMILY=""
@@ -73,10 +73,21 @@ usage() {
   printf '  menu          Show interactive menu (default)\n'
 }
 
-require_root() {
-  if [ "$(id -u)" -ne 0 ]; then
-    fail "This script must be run as root. Try: sudo $0"
+detect_dest() {
+  if [ -z "${VMPKG_DEST:-}" ]; then
+    if [ -x "/bin/vmpkg" ]; then
+      VMPKG_DEST="/bin/vmpkg"
+    elif [ -x "/usr/local/bin/vmpkg" ]; then
+      VMPKG_DEST="/usr/local/bin/vmpkg"
+    elif [ -x "$HOME/.local/bin/vmpkg" ]; then
+      VMPKG_DEST="$HOME/.local/bin/vmpkg"
+    elif [ "$(id -u)" -eq 0 ]; then
+      VMPKG_DEST="/usr/local/bin/vmpkg"
+    else
+      VMPKG_DEST="$HOME/.local/bin/vmpkg"
+    fi
   fi
+  VMPKG_BAK="${VMPKG_DEST}.bak"
 }
 
 detect_pkg_mgr() {
@@ -460,7 +471,7 @@ parse_args() {
 
 main() {
   parse_args "$@"
-  require_root
+  detect_dest
   detect_pkg_mgr
 
   log "Welcome to the VMPKG installer & maintenance tool."

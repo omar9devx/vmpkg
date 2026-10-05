@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-VMPKG_VERSION="1.2.0"
+VMPKG_VERSION="1.3.0"
 
 ###############################################################################
 # ENV / FLAGS
@@ -206,6 +206,7 @@ choose_downloader() {
 download_file() {
   local url="$1"
   local out="$2"
+  local expected_sha256="${3:-}"
 
   if [[ -z "$url" ]]; then
     die "Empty URL for download."
@@ -222,22 +223,64 @@ download_file() {
     return 0
   fi
 
-  case "$dl" in
-    curl)
-      curl -L --fail --show-error --connect-timeout 15 --retry 3 -o "$out" "$url"
-      ;;
-    wget)
-      wget --tries=3 --timeout=15 -O "$out" "$url"
-      ;;
-  esac
+  if [[ "$url" =~ ^file://(.*)$ ]]; then
+    cp "${BASH_REMATCH[1]}" "$out"
+  elif [[ -f "$url" ]]; then
+    cp "$url" "$out"
+  else
+    case "$dl" in
+      curl)
+        curl -L --fail --show-error --connect-timeout 15 --retry 3 -o "$out" "$url"
+        ;;
+      wget)
+        wget --tries=3 --timeout=15 -O "$out" "$url"
+        ;;
+    esac
+  fi
+
+  if [[ -n "$expected_sha256" ]]; then
+    log "Verifying SHA256 checksum..."
+    local actual_sha256=""
+    if command -v sha256sum >/dev/null 2>&1; then
+      actual_sha256="$(sha256sum "$out" | awk '{print $1}')"
+    elif command -v shasum >/dev/null 2>&1; then
+      actual_sha256="$(shasum -a 256 "$out" | awk '{print $1}')"
+    fi
+    if [[ -n "$actual_sha256" && "$actual_sha256" != "$expected_sha256" ]]; then
+      rm -f "$out"
+      die "Checksum mismatch! Expected: $expected_sha256, Got: $actual_sha256"
+    fi
+    log_success "Checksum verified: $actual_sha256"
+  fi
 }
 
 detect_archive_type() {
   local file="$1"
+  local url="${2:-}"
+
+  # 1. Check file command if available
+  if command -v file >/dev/null 2>&1 && [[ -f "$file" ]]; then
+    local mime
+    mime="$(file -b --mime-type "$file" 2>/dev/null || true)"
+    case "$mime" in
+      application/gzip|application/x-gzip) echo "tar.gz"; return 0 ;;
+      application/x-tar)                   echo "tar"; return 0 ;;
+      application/zip)                     echo "zip"; return 0 ;;
+    esac
+  fi
+
+  # 2. Check url extension
+  case "$url" in
+    *.tar.gz|*.tgz) echo "tar.gz"; return 0 ;;
+    *.tar)          echo "tar"; return 0 ;;
+    *.zip)          echo "zip"; return 0 ;;
+  esac
+
+  # 3. Check file extension
   case "$file" in
-    *.tar.gz|*.tgz) echo "tar.gz" ;;
-    *.tar)          echo "tar" ;;
-    *.zip)          echo "zip" ;;
+    *.tar.gz|*.tgz) echo "tar.gz"; return 0 ;;
+    *.tar)          echo "tar"; return 0 ;;
+    *.zip)          echo "zip"; return 0 ;;
     *)              echo "unknown" ;;
   esac
 }
@@ -362,6 +405,7 @@ usage() {
   printf "  %sregister NAME VER URL [DESC]%s  Register package in local registry\n" "$GREEN" "$RESET"
   printf "  %sinstall NAME%s               Install package from registry\n" "$GREEN" "$RESET"
   printf "  %sreinstall NAME%s             Force reinstall package\n" "$GREEN" "$RESET"
+  printf "  %supgrade [NAME]%s             Upgrade installed package(s)\n" "$GREEN" "$RESET"
   printf "  %sremove NAME%s                Remove installed package\n" "$GREEN" "$RESET"
   printf "  %slist%s                       List installed packages\n" "$GREEN" "$RESET"
   printf "  %ssearch PATTERN%s             Search registry entries\n" "$GREEN" "$RESET"
@@ -448,8 +492,8 @@ cmd_show() {
   fi
 
   ui_title "Package details"
-  local n ver url desc
-  IFS='|' read -r n ver url desc <<<"$line"
+  local n ver url desc sha256
+  IFS='|' read -r n ver url desc sha256 <<<"$line"
   printf "Name:        %s\n" "$n"
   printf "Version:     %s\n" "$ver"
   printf "URL:         %s\n" "$url"
@@ -511,11 +555,17 @@ cmd_install_internal() {
     die "Package '$name' not found in registry. Use 'vmpkg register' first."
   fi
 
-  local n ver url desc
-  IFS='|' read -r n ver url desc <<<"$line"
+  local n ver url desc sha256
+  IFS='|' read -r n ver url desc sha256 <<<"$line"
 
   local install_dir="$VMPKG_PKGS/${name}-${ver}"
-  local archive="$VMPKG_CACHE/${name}-${ver}.pkg"
+  local ext="pkg"
+  case "$url" in
+    *.tar.gz|*.tgz) ext="tar.gz" ;;
+    *.tar)          ext="tar" ;;
+    *.zip)          ext="zip" ;;
+  esac
+  local archive="$VMPKG_CACHE/${name}-${ver}.${ext}" 
 
   ui_title "Install plan"
   printf "Name:        %s\n" "$name"
@@ -536,7 +586,7 @@ cmd_install_internal() {
     return 1
   fi
 
-  download_file "$url" "$archive"
+  download_file "$url" "$archive" "${sha256:-}"
 
   if [[ "$VMPKG_DRY_RUN" -eq 1 ]]; then
     log "[DRY-RUN] Skipping extract & link steps."
@@ -546,7 +596,7 @@ cmd_install_internal() {
   rm -rf "$install_dir"
   mkdir -p "$install_dir"
 
-  extract_archive "$archive" "$install_dir"
+  extract_archive "$archive" "$install_dir" "$url"
 
   local bin_links
   bin_links="$(link_binaries "$install_dir" "$name")"
@@ -582,6 +632,52 @@ cmd_reinstall() {
     die "You must specify a package name to reinstall."
   fi
   cmd_install_internal "$1" 1
+}
+
+
+cmd_upgrade() {
+  ensure_layout
+  local target_pkg="${1:-}"
+
+  if [[ -n "$target_pkg" ]]; then
+    cmd_install_internal "$target_pkg" 1
+    return $?
+  fi
+
+  ui_title "Checking for package updates"
+  local count=0
+  local updated=0
+  shopt -s nullglob
+  for mf in "$VMPKG_DB"/*.manifest; do
+    [[ -f "$mf" ]] || continue
+    ((count++)) || true
+    local name cur_ver
+    name="$(manifest_read_var "$mf" "name" || true)"
+    cur_ver="$(manifest_read_var "$mf" "version" || true)"
+    local line
+    line="$(registry_find_line "$name")"
+    if [[ -n "$line" ]]; then
+      local n reg_ver url desc sha256
+      IFS='|' read -r n reg_ver url desc sha256 <<<"$line"
+      if [[ "$reg_ver" != "$cur_ver" ]]; then
+        log "Update available for '$name': $cur_ver -> $reg_ver"
+        if cmd_install_internal "$name" 1; then
+          ((updated++)) || true
+        fi
+      else
+        debug "Package '$name' is up to date ($cur_ver)."
+      fi
+    fi
+  done
+  shopt -u nullglob
+
+  if [[ "$count" -eq 0 ]]; then
+    echo "No packages currently installed."
+  elif [[ "$updated" -eq 0 ]]; then
+    log_success "All installed packages are up to date."
+  else
+    log_success "Updated $updated package(s)."
+  fi
 }
 
 cmd_remove() {
@@ -737,8 +833,11 @@ cmd_doctor() {
 main() {
   require_linux
 
+  parse_global_flags "$@"
+  set -- "${VMPKG_ARGS[@]}"
+
   case "${1-}" in
-    -v|--version)
+    -v|--version|version)
       echo "vmpkg $VMPKG_VERSION"
       exit 0
       ;;
@@ -747,9 +846,6 @@ main() {
   local cmd="${1:-}"
   shift || true
 
-  parse_global_flags "$@"
-  set -- "${VMPKG_ARGS[@]}"
-
   apply_color_mode
 
   case "$cmd" in
@@ -757,10 +853,11 @@ main() {
     register)    cmd_register "$@" ;;
     install)     cmd_install "$@" ;;
     reinstall)   cmd_reinstall "$@" ;;
+    upgrade)     cmd_upgrade "$@" ;;
     remove)      cmd_remove "$@" ;;
     list)        cmd_list "$@" ;;
     search)      cmd_search "$@" ;;
-    show)        cmd_show "$@" ;;
+    show|info)   cmd_show "$@" ;;
     clean)       cmd_clean "$@" ;;
     doctor)      cmd_doctor "$@" ;;
     ""|help|-h|--help)

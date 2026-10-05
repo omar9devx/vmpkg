@@ -10,6 +10,12 @@ If you have **Linux + Bash + curl/wget + tar (optionally unzip)** — **VMPKG wo
 ---
 
 <p align="center">
+  <a href="https://github.com/omar9devx/vmpkg/actions/workflows/ci.yml">
+    <img src="https://github.com/omar9devx/vmpkg/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://github.com/omar9devx/vmpkg">
+    <img src="https://img.shields.io/badge/version-1.3.0-blue.svg" alt="Version: 1.3.0">
+  </a>
   <a href="https://github.com/omar9devx/vmpkg">
     <img src="https://img.shields.io/badge/platform-linux-333333?logo=linux&logoColor=ffffff" alt="Platform: Linux">
   </a>
@@ -71,10 +77,14 @@ It is ideal for:
 - ✔ **User-space package manager** — no root needed  
 - ✔ Works on **all Linux distributions**  
 - ✔ **Self-contained registry & manifests**  
-- ✔ Supports `.tar.gz`, `.tar`, `.zip`  
+- ✔ **SHA256 checksum verification** for package integrity  
+- ✔ Automatic package upgrade check & install (`vmpkg upgrade`)  
+- ✔ Supports `.tar.gz`, `.tar.xz`, `.tar.bz2`, `.tar`, `.zip`  
+- ✔ Robust MIME-type detection using `file` and extensions  
 - ✔ Predictable directory structure  
 - ✔ Pretty CLI output (colors + icons + timestamps)  
 - ✔ Minimal dependencies (Bash + curl/wget + tar)  
+- ✔ Automated regression test suite & GitHub Actions CI  
 - ✔ Includes system helper commands  
 
 ---
@@ -159,19 +169,21 @@ Directory structure:
 
 ## 📦 Package Registry Format
 
-The registry file is simple and human-readable:
+The registry file is simple, fast, and human-readable:
 
 ```
-name|version|url|description
+name|version|url|description|[sha256]
 ```
 
 Examples:
 
 ```
-bat|0.24.0|https://example.com/bat.tar.gz|cat clone with wings
+bat|0.24.0|https://example.com/bat.tar.gz|cat clone with wings|d68ffad399d25514f76ba202cfbe9c4b7b25055b46e311394a5303c7343e8ea2
 rg|14.1.0|https://example.com/rg.tar.gz|fast code search
 lazygit|0.44.0|https://example.com/lazygit.tar.gz|git TUI
 ```
+
+> **Note:** If `sha256` is provided, `vmpkg` automatically verifies the downloaded archive's checksum against it before extraction.
 
 Expected archive layout:
 
@@ -195,17 +207,19 @@ mytool-x86_64/
 
 ## 🏗 Installation
 
-### Recommended:
+### User-Space Install (No root required — Recommended):
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh)
+curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh | bash
 ```
+> Installs binary to `~/.local/bin/vmpkg`. Ensure `~/.local/bin` is in your `$PATH`.
 
-### Alternative:
+### System-Wide Install (Root):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/omar9devx/vmpkg/main/installscript.sh | sudo bash
 ```
+> Installs binary to `/usr/local/bin/vmpkg`.
 
 ---
 
@@ -229,9 +243,10 @@ Options include:
 
 ```bash
 vmpkg init
-vmpkg register <name> <version> <url> [description...]
+vmpkg register <name> <version> <url> [description...] [sha256]
 vmpkg install <name>
 vmpkg reinstall <name>
+vmpkg upgrade [name]
 vmpkg remove <name>
 
 vmpkg list
